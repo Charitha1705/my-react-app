@@ -1,34 +1,82 @@
 pipeline {
     agent any
+
+    environment {
+        IMAGE_NAME = "charitha1705/my-react-app"
+        IMAGE_TAG  = "latest"
+        SERVICE_NAME = "react-app"
+        DOCKERHUB_CREDENTIALS = "dockerhub"
+    }
+
     stages {
+
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/charitha1705/my-react-app.git'
+                checkout scm
             }
         }
-        stage('Build') {
-            steps {
-                sh 'docker build -t my-react-app:latest .'
-            }
-        }
+
         stage('Test') {
             steps {
-                sh 'docker run --rm my-react-app:latest npm test -- --watchAll=false'
+                sh '''
+                  docker run --rm \
+                    -v "$PWD":/app \
+                    -w /app \
+                    node:18-alpine \
+                    sh -c "npm install && npm test -- --watchAll=false"
+                '''
             }
         }
-        stage('Push Image') {
+
+        stage('Build Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh 'echo $PASS | docker login -u $USER --password-stdin'
-                    sh 'docker tag my-react-app:latest 1ms24mc020/my-react-app:latest'
-                    sh 'docker push 1ms24mc020/my-react-app:latest'
+                sh '''
+                  docker build -t $IMAGE_NAME:$IMAGE_TAG .
+                '''
+            }
+        }
+
+        stage('Push Image to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: DOCKERHUB_CREDENTIALS,
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                      echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                      docker push $IMAGE_NAME:$IMAGE_TAG
+                    '''
                 }
             }
         }
-        stage('Deploy') {
+
+        stage('Deploy to Docker Swarm') {
             steps {
-                sh 'docker stack deploy -c docker-compose.yml react-stack'
+                sh '''
+                  if docker service ls | grep -q $SERVICE_NAME; then
+                    docker service update \
+                      --image $IMAGE_NAME:$IMAGE_TAG \
+                      --force \
+                      $SERVICE_NAME
+                  else
+                    docker service create \
+                      --name $SERVICE_NAME \
+                      --replicas 2 \
+                      -p 80:80 \
+                      $IMAGE_NAME:$IMAGE_TAG
+                  fi
+                '''
             }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ React app deployed successfully to Docker Swarm"
+        }
+        failure {
+            echo "❌ Pipeline failed"
         }
     }
 }
