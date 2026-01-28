@@ -3,7 +3,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/your-username/my-react-app.git'
+                git branch: 'main', url: 'https://github.com/charitha1705/my-react-app.git'
             }
         }
         stage('Build') {
@@ -20,8 +20,8 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     sh 'echo $PASS | docker login -u $USER --password-stdin'
-                    sh 'docker tag my-react-app:latest your-dockerhub-username/my-react-app:latest'
-                    sh 'docker push your-dockerhub-username/my-react-app:latest'
+                    sh 'docker tag my-react-app:latest 1ms24mc020/my-react-app:latest'
+                    sh 'docker push 1ms24mc020/my-react-app:latest'
                 }
             }
         }
