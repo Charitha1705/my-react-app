@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "charitha1705/my-react-app"
+        IMAGE_NAME = "1ms24mc020/my-react-app"
         IMAGE_TAG = "latest"
         SERVICE_NAME = "react-app"
         DOCKERHUB_CREDENTIALS = "dockerhub"
@@ -75,15 +75,6 @@ pipeline {
                   fi
                 '''
             }
-        }
-    }
-
-    post {
-        success {
-            echo "✅ React app deployed to Docker Swarm successfully"
-        }
-        failure {
-            echo "❌ Pipeline failed"
         }
     }
 }
