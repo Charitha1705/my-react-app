@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         IMAGE_NAME = "charitha1705/my-react-app"
-        IMAGE_TAG  = "latest"
+        IMAGE_TAG = "latest"
         SERVICE_NAME = "react-app"
         DOCKERHUB_CREDENTIALS = "dockerhub"
     }
@@ -13,6 +13,20 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: DOCKERHUB_CREDENTIALS,
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                      echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    '''
+                }
             }
         }
 
@@ -38,16 +52,9 @@ pipeline {
 
         stage('Push Image to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: DOCKERHUB_CREDENTIALS,
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh '''
-                      echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                      docker push $IMAGE_NAME:$IMAGE_TAG
-                    '''
-                }
+                sh '''
+                  docker push $IMAGE_NAME:$IMAGE_TAG
+                '''
             }
         }
 
@@ -73,7 +80,7 @@ pipeline {
 
     post {
         success {
-            echo "✅ React app deployed successfully to Docker Swarm"
+            echo "✅ React app deployed to Docker Swarm successfully"
         }
         failure {
             echo "❌ Pipeline failed"
